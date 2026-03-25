@@ -48,6 +48,65 @@ const baseTemplate = (content) => `
 const btnStyle = 'display:inline-block;padding:12px 30px;background-color:#FF8F00;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:15px;';
 const infoBoxStyle = 'background-color:#e3f2fd;border-left:4px solid #1565C0;padding:15px;margin:15px 0;border-radius:0 4px 4px 0;';
 
+// ─── 0. Email Verification ───────────────────────────────────────────────────
+
+const verificationTexts = {
+  es: {
+    subject: 'Verifica tu cuenta — Ulpan Jerusalem',
+    heading: 'Verifica tu email',
+    greeting: 'Hola',
+    body: 'Gracias por registrarte en <strong>Ulpan Jerusalem</strong>. Para activar tu cuenta, haz clic en el siguiente boton:',
+    btn: 'Verificar mi cuenta',
+    expiry: 'Este enlace expirara en 24 horas. Si no creaste esta cuenta, puedes ignorar este mensaje.',
+    fallback: 'Si el boton no funciona, copia y pega este enlace en tu navegador:',
+  },
+  en: {
+    subject: 'Verify your account — Ulpan Jerusalem',
+    heading: 'Verify your email',
+    greeting: 'Hello',
+    body: 'Thank you for signing up at <strong>Ulpan Jerusalem</strong>. To activate your account, click the button below:',
+    btn: 'Verify my account',
+    expiry: 'This link will expire in 24 hours. If you did not create this account, you can ignore this message.',
+    fallback: 'If the button does not work, copy and paste this link in your browser:',
+  },
+  he: {
+    subject: 'אמת את החשבון שלך — אולפן ירושלים',
+    heading: 'אמת את האימייל שלך',
+    greeting: 'שלום',
+    body: 'תודה שנרשמת ב-<strong>אולפן ירושלים</strong>. כדי להפעיל את החשבון שלך, לחץ על הכפתור הבא:',
+    btn: 'אמת את החשבון שלי',
+    expiry: 'קישור זה יפוג תוך 24 שעות. אם לא יצרת חשבון זה, ניתן להתעלם מהודעה זו.',
+    fallback: 'אם הכפתור לא עובד, העתק והדבק את הקישור הבא בדפדפן:',
+  },
+};
+
+const sendVerificationEmail = async (user, verificationToken) => {
+  const lang = user.idioma || 'es';
+  const txt = verificationTexts[lang] || verificationTexts.es;
+  const dir = lang === 'he' ? 'rtl' : 'ltr';
+  const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
+
+  const html = baseTemplate(`
+    <div dir="${dir}">
+    <h2 style="color:#1565C0;margin-top:0;">${txt.heading}</h2>
+    <p>${txt.greeting} <strong>${user.nombre}</strong>,</p>
+    <p>${txt.body}</p>
+    <p style="text-align:center;">
+      <a href="${verifyUrl}" style="${btnStyle}">${txt.btn}</a>
+    </p>
+    <p style="color:#666666;font-size:13px;">${txt.expiry}</p>
+    <p style="color:#666666;font-size:13px;">${txt.fallback}</p>
+    <p style="color:#1565C0;font-size:13px;word-break:break-all;" dir="ltr">${verifyUrl}</p>
+    </div>
+  `);
+
+  return sendEmail(
+    { email: user.email, name: user.nombre },
+    txt.subject,
+    html
+  );
+};
+
 // ─── 1. Welcome Email ────────────────────────────────────────────────────────
 
 const sendWelcomeEmail = async (user) => {
@@ -341,6 +400,7 @@ const sendMaestroNewStudentEmail = async (maestro, alumno, curso) => {
 };
 
 module.exports = {
+  sendVerificationEmail,
   sendWelcomeEmail,
   sendCourseEnrollmentEmail,
   sendNewVideoEmail,

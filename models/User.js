@@ -33,6 +33,23 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    idioma: {
+      type: String,
+      enum: ['es', 'en', 'he'],
+      default: 'es',
+    },
     rol: {
       type: String,
       enum: ['admin', 'maestro', 'alumno'],

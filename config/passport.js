@@ -39,17 +39,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           // Si existe por email pero sin googleId, vincular la cuenta
           if (!user.googleId) {
             user.googleId = googleId;
+            user.emailVerified = true;
             await user.save();
           }
           return done(null, user);
         }
 
-        // Crear nuevo usuario con rol alumno por defecto
+        // Crear nuevo usuario con rol alumno por defecto (Google = email verificado)
         user = await User.create({
           nombre,
           email,
           googleId,
           rol: 'alumno',
+          emailVerified: true,
         });
 
         // Enviar email de bienvenida

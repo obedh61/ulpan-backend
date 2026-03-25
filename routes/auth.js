@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body } = require('express-validator');
 const passport = require('passport');
-const { registro, login, getPerfil, forgotPassword, resetPassword } = require('../controllers/authController');
+const { registro, login, getPerfil, forgotPassword, resetPassword, verificarEmail, reenviarVerificacion } = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -42,6 +42,15 @@ router.post(
     body('confirmPassword', 'Confirmar contrasena es obligatorio').notEmpty(),
   ],
   resetPassword
+);
+
+// Email verification
+router.get('/verify-email/:token', verificarEmail);
+
+router.post(
+  '/resend-verification',
+  [body('email', 'Email valido requerido').isEmail()],
+  reenviarVerificacion
 );
 
 // Google OAuth
