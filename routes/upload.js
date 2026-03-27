@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.use(authMiddleware, roleMiddleware('maestro', 'admin'));
 
-const upload = multer({
+const uploadPdf = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -19,7 +19,20 @@ const upload = multer({
   },
 });
 
-router.post('/pdf', upload.single('pdf'), async (req, res) => {
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten imágenes (JPG, PNG, WEBP)'));
+    }
+  },
+});
+
+router.post('/pdf', uploadPdf.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No se envió ningún archivo' });
@@ -48,6 +61,36 @@ router.post('/pdf', upload.single('pdf'), async (req, res) => {
   }
 });
 
+router.post('/image', uploadImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No se envió ninguna imagen' });
+    }
+
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'ulpan-jerusalem/courses',
+          transformation: [
+            { width: 800, height: 450, crop: 'fill', quality: 'auto', format: 'webp' },
+          ],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    res.json({ url: result.secure_url });
+  } catch (error) {
+    console.error('Error al subir imagen:', error);
+    res.status(500).json({ message: 'Error al subir la imagen' });
+  }
+});
+
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -55,7 +98,7 @@ router.use((err, req, res, next) => {
     }
     return res.status(400).json({ message: err.message });
   }
-  if (err.message === 'Solo se permiten archivos PDF') {
+  if (err.message === 'Solo se permiten archivos PDF' || err.message === 'Solo se permiten imágenes (JPG, PNG, WEBP)') {
     return res.status(400).json({ message: err.message });
   }
   next(err);

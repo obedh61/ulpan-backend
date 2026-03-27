@@ -44,7 +44,7 @@ const createCourse = async (req, res) => {
   }
 
   try {
-    const { titulo, descripcion, maestroId, maxAlumnos, inscripcionesAbiertas, fechaInicio, fechaFin, precio, moneda, esGratuito, whatsappLink, numeroClases, horario } = req.body;
+    const { titulo, descripcion, maestroId, maxAlumnos, inscripcionesAbiertas, fechaInicio, fechaFin, precio, moneda, esGratuito, whatsappLink, numeroClases, horario, imagenUrl } = req.body;
 
     const assignedMaestroId = req.user.rol === 'admin' ? maestroId : req.user._id;
     const totalClases = Math.max(1, Math.floor(numeroClases || 24));
@@ -62,6 +62,7 @@ const createCourse = async (req, res) => {
       esGratuito: esGratuito || false,
       horario: horario || { es: '', en: '', he: '' },
       whatsappLink: whatsappLink || '',
+      imagenUrl: imagenUrl || '',
       numeroClases: totalClases,
     });
 

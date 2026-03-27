@@ -50,6 +50,11 @@ const courseSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    imagenUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     numeroClases: {
       type: Number,
       default: 24,
