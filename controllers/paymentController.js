@@ -3,7 +3,7 @@ const Course = require('../models/Course');
 const Coupon = require('../models/Coupon');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
-const { createTransaction, verifyWebhookSignature } = require('../config/allpay');
+const { createTransaction, checkPaymentStatus, verifyWebhookSignature } = require('../config/allpay');
 const { sendPaymentConfirmationEmail, sendPaymentFailedEmail, sendCourseEnrollmentEmail, sendAdminNewSaleEmail, sendMaestroNewStudentEmail } = require('../services/emailService');
 const { generateReceipt } = require('../services/pdfService');
 
@@ -177,6 +177,58 @@ const crearPago = async (req, res) => {
   }
 };
 
+// Helper: procesar pago completado (usado por webhook y verificacion)
+const completarPago = async (payment) => {
+  payment.estado = 'completado';
+  await payment.save();
+
+  // Crear inscripcion
+  const existeInscripcion = await Enrollment.findOne({
+    cursoId: payment.cursoId,
+    alumnoId: payment.alumnoId,
+  });
+
+  if (!existeInscripcion) {
+    await Enrollment.create({
+      cursoId: payment.cursoId,
+      alumnoId: payment.alumnoId,
+      paymentId: payment._id,
+      pagado: true,
+    });
+  }
+
+  // Incrementar uso del cupon
+  if (payment.cuponId) {
+    await Coupon.findByIdAndUpdate(payment.cuponId, { $inc: { usosActuales: 1 } });
+  }
+
+  // Enviar emails
+  const [alumno, curso] = await Promise.all([
+    User.findById(payment.alumnoId),
+    Course.findById(payment.cursoId),
+  ]);
+
+  if (alumno && curso) {
+    sendPaymentConfirmationEmail(alumno, curso, payment).catch((err) =>
+      console.error('Error enviando payment confirmation email:', err)
+    );
+
+    User.find({ rol: 'admin' }).select('nombre email').then((admins) => {
+      sendAdminNewSaleEmail(admins, alumno, curso, payment).catch((err) =>
+        console.error('Error enviando admin sale email:', err)
+      );
+    });
+    if (curso.maestroId) {
+      const maestroId = curso.maestroId._id || curso.maestroId;
+      User.findById(maestroId).select('nombre email').then((maestro) => {
+        sendMaestroNewStudentEmail(maestro, alumno, curso).catch((err) =>
+          console.error('Error enviando maestro new student email:', err)
+        );
+      });
+    }
+  }
+};
+
 // POST /api/payments/webhook (publico, sin auth)
 // Allpay envia: order_id, status (0=no pagado, 1=pagado), amount, sign, etc.
 const webhookAllpay = async (req, res) => {
@@ -202,55 +254,7 @@ const webhookAllpay = async (req, res) => {
     const isPaid = status === 1 || status === '1';
 
     if (isPaid) {
-      payment.estado = 'completado';
-      await payment.save();
-
-      // Crear inscripcion
-      const existeInscripcion = await Enrollment.findOne({
-        cursoId: payment.cursoId,
-        alumnoId: payment.alumnoId,
-      });
-
-      if (!existeInscripcion) {
-        await Enrollment.create({
-          cursoId: payment.cursoId,
-          alumnoId: payment.alumnoId,
-          paymentId: payment._id,
-          pagado: true,
-        });
-      }
-
-      // Incrementar uso del cupon
-      if (payment.cuponId) {
-        await Coupon.findByIdAndUpdate(payment.cuponId, { $inc: { usosActuales: 1 } });
-      }
-
-      // Enviar emails
-      const [alumno, curso] = await Promise.all([
-        User.findById(payment.alumnoId),
-        Course.findById(payment.cursoId),
-      ]);
-
-      if (alumno && curso) {
-        sendPaymentConfirmationEmail(alumno, curso, payment).catch((err) =>
-          console.error('Error enviando payment confirmation email:', err)
-        );
-
-        // Notificar admins y maestro
-        User.find({ rol: 'admin' }).select('nombre email').then((admins) => {
-          sendAdminNewSaleEmail(admins, alumno, curso, payment).catch((err) =>
-            console.error('Error enviando admin sale email:', err)
-          );
-        });
-        if (curso.maestroId) {
-          const maestroId = curso.maestroId._id || curso.maestroId;
-          User.findById(maestroId).select('nombre email').then((maestro) => {
-            sendMaestroNewStudentEmail(maestro, alumno, curso).catch((err) =>
-              console.error('Error enviando maestro new student email:', err)
-            );
-          });
-        }
-      }
+      await completarPago(payment);
     } else {
       payment.estado = 'fallido';
       await payment.save();
@@ -277,17 +281,39 @@ const webhookAllpay = async (req, res) => {
 // GET /api/payments/verify/:paymentId
 const verificarPago = async (req, res) => {
   try {
-    const payment = await Payment.findById(req.params.paymentId)
-      .populate('cursoId', 'titulo')
-      .populate('alumnoId', 'nombre email');
+    let payment = await Payment.findById(req.params.paymentId);
 
     if (!payment) {
       return res.status(404).json({ message: 'Pago no encontrado' });
     }
 
-    if (payment.alumnoId._id.toString() !== req.user._id.toString() && req.user.rol !== 'admin') {
+    if (payment.alumnoId.toString() !== req.user._id.toString() && req.user.rol !== 'admin') {
       return res.status(403).json({ message: 'No autorizado' });
     }
+
+    // Fallback: si sigue pendiente, consultar Allpay directamente
+    if (payment.estado === 'pendiente') {
+      try {
+        const allpayStatus = await checkPaymentStatus(payment._id.toString());
+        const isPaid = allpayStatus.status === 1 || allpayStatus.status === '1';
+        const isFailed = allpayStatus.status === 0 || allpayStatus.status === '0';
+
+        if (isPaid) {
+          await completarPago(payment);
+          payment = await Payment.findById(req.params.paymentId);
+        } else if (isFailed && allpayStatus.status !== undefined) {
+          payment.estado = 'fallido';
+          await payment.save();
+        }
+      } catch (err) {
+        console.error('Error consultando Allpay status:', err.message);
+      }
+    }
+
+    // Re-fetch con populate para la respuesta
+    payment = await Payment.findById(req.params.paymentId)
+      .populate('cursoId', 'titulo')
+      .populate('alumnoId', 'nombre email');
 
     res.json(payment);
   } catch (error) {
