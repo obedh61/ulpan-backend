@@ -10,7 +10,7 @@ const { generateReceipt } = require('../services/pdfService');
 // POST /api/payments/create
 const crearPago = async (req, res) => {
   try {
-    const { cursoId, cuponCodigo } = req.body;
+    const { cursoId, cuponCodigo, tashlumim } = req.body;
 
     const course = await Course.findById(cursoId);
     if (!course || !course.activo) {
@@ -154,6 +154,7 @@ const crearPago = async (req, res) => {
       webhookUrl: `${backendUrl}/api/payments/webhook`,
       clientName: req.user.nombre,
       clientEmail: req.user.email,
+      payments: tashlumim && tashlumim > 1 ? Math.min(Math.max(Math.floor(tashlumim), 2), 12) : undefined,
     });
 
     // Allpay retorna payment_page_url con la URL del formulario de pago
