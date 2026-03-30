@@ -295,16 +295,14 @@ const verificarPago = async (req, res) => {
     if (payment.estado === 'pendiente') {
       try {
         const allpayStatus = await checkPaymentStatus(payment._id.toString());
+        console.log('Allpay status response:', JSON.stringify(allpayStatus));
         const isPaid = allpayStatus.status === 1 || allpayStatus.status === '1';
-        const isFailed = allpayStatus.status === 0 || allpayStatus.status === '0';
 
         if (isPaid) {
           await completarPago(payment);
           payment = await Payment.findById(req.params.paymentId);
-        } else if (isFailed && allpayStatus.status !== undefined) {
-          payment.estado = 'fallido';
-          await payment.save();
         }
+        // No marcar como fallido desde aquí — solo el webhook tiene autoridad para eso
       } catch (err) {
         console.error('Error consultando Allpay status:', err.message);
       }
