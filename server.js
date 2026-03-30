@@ -28,6 +28,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
+  'https://ulpanjerusalem.com',
+  'https://www.ulpanjerusalem.com',
 ].filter(Boolean);
 
 app.use(cors({
