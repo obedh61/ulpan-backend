@@ -8,6 +8,7 @@ const {
   eliminarUsuario,
   getMaestros,
   getCoursesAdmin,
+  getAlumnosCursoAdmin,
   getClasesCursoAdmin,
   actualizarClaseAdmin,
   getIngresos,
@@ -45,6 +46,7 @@ router.delete('/usuarios/:id', eliminarUsuario);
 router.get('/courses', getCoursesAdmin);
 
 router.get('/courses/:id/clases', getClasesCursoAdmin);
+router.get('/courses/:id/alumnos', getAlumnosCursoAdmin);
 
 router.put('/clases/:claseId', actualizarClaseAdmin);
 

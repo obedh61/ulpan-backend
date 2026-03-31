@@ -166,6 +166,18 @@ const getCoursesAdmin = async (req, res) => {
   }
 };
 
+// GET /api/admin/courses/:id/alumnos
+const getAlumnosCursoAdmin = async (req, res) => {
+  try {
+    const inscripciones = await Enrollment.find({ cursoId: req.params.id })
+      .populate('alumnoId', 'nombre email')
+      .sort({ fechaInscripcion: -1 });
+    res.json(inscripciones);
+  } catch (error) {
+    res.status(500).json({ message: 'Error en el servidor', error: error.message });
+  }
+};
+
 // GET /api/admin/courses/:id/clases
 const getClasesCursoAdmin = async (req, res) => {
   try {
@@ -225,6 +237,23 @@ const getIngresos = async (req, res) => {
       { $sort: { '_id.year': 1, '_id.month': 1 } },
     ]);
 
+    // Ingresos por mes desglosado por moneda
+    const ingresosPorMesMoneda = await Payment.aggregate([
+      { $match: { estado: 'completado', createdAt: { $gte: hace12Meses } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            moneda: '$moneda',
+          },
+          total: { $sum: '$monto' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.year': -1, '_id.month': -1 } },
+    ]);
+
     // Ingresos por curso
     const ingresosPorCurso = await Payment.aggregate([
       { $match: { estado: 'completado' } },
@@ -254,7 +283,7 @@ const getIngresos = async (req, res) => {
       { $sort: { total: -1 } },
     ]);
 
-    res.json({ totalPorMoneda, ingresosPorMes, ingresosPorCurso });
+    res.json({ totalPorMoneda, ingresosPorMes, ingresosPorMesMoneda, ingresosPorCurso });
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener ingresos', error: error.message });
   }
@@ -366,6 +395,7 @@ module.exports = {
   eliminarUsuario,
   getMaestros,
   getCoursesAdmin,
+  getAlumnosCursoAdmin,
   getClasesCursoAdmin,
   actualizarClaseAdmin,
   getIngresos,
