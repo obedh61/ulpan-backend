@@ -103,6 +103,52 @@ const updateCourse = async (req, res) => {
     if (updateData.fechaInicio === '' || updateData.fechaInicio === undefined) updateData.fechaInicio = null;
     if (updateData.fechaFin === '' || updateData.fechaFin === undefined) updateData.fechaFin = null;
 
+    // Handle numeroClases changes
+    const newNumeroClases = updateData.numeroClases ? Math.max(1, Math.floor(updateData.numeroClases)) : null;
+    if (newNumeroClases && newNumeroClases !== course.numeroClases) {
+      const currentCount = course.numeroClases || 0;
+
+      if (newNumeroClases > currentCount) {
+        // Add new classes
+        const newClases = [];
+        for (let i = currentCount + 1; i <= newNumeroClases; i++) {
+          newClases.push({
+            cursoId: course._id,
+            numeroClase: i,
+            titulo: { es: `Lección ${i}`, en: `Lesson ${i}`, he: `שיעור ${i}` },
+          });
+        }
+        await Clase.insertMany(newClases);
+      } else if (newNumeroClases < currentCount) {
+        // Remove classes from the end that have no content (no video, no zoom, no pdf)
+        const clasesToRemove = await Clase.find({
+          cursoId: course._id,
+          numeroClase: { $gt: newNumeroClases },
+          $and: [
+            { $or: [{ videoId: null }, { videoId: { $exists: false } }] },
+            { $or: [{ videoUrl: null }, { videoUrl: '' }, { videoUrl: { $exists: false } }] },
+            { $or: [{ zoomLink: null }, { zoomLink: '' }, { zoomLink: { $exists: false } }] },
+            { $or: [{ pdfUrl: null }, { pdfUrl: '' }, { pdfUrl: { $exists: false } }] },
+          ],
+        });
+
+        const removableIds = clasesToRemove.map((c) => c._id);
+        if (removableIds.length > 0) {
+          await Clase.deleteMany({ _id: { $in: removableIds } });
+        }
+
+        // Check how many classes remain above the new limit (classes with content that couldn't be deleted)
+        const remainingAbove = await Clase.countDocuments({
+          cursoId: course._id,
+          numeroClase: { $gt: newNumeroClases },
+        });
+        if (remainingAbove > 0) {
+          // Adjust numeroClases to account for classes that couldn't be removed
+          updateData.numeroClases = newNumeroClases + remainingAbove;
+        }
+      }
+    }
+
     const updated = await Course.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
