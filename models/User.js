@@ -55,6 +55,19 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'maestro', 'alumno'],
       default: 'alumno',
     },
+    telefono: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    avatar: {
+      type: String,
+      default: null,
+    },
+    avatarPublicId: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

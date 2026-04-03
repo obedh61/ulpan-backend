@@ -10,7 +10,7 @@ const { generateReceipt } = require('../services/pdfService');
 // POST /api/payments/create
 const crearPago = async (req, res) => {
   try {
-    const { cursoId, cuponCodigo, tashlumim } = req.body;
+    const { cursoId, cuponCodigo, tashlumim, telefono } = req.body;
 
     const course = await Course.findById(cursoId);
     if (!course || !course.activo) {
@@ -143,7 +143,16 @@ const crearPago = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
     const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
 
+    // Guardar teléfono en el perfil del usuario si lo proporcionó
+    if (telefono && !req.user.telefono) {
+      req.user.telefono = telefono;
+      req.user.save({ validateBeforeSave: false }).catch((err) =>
+        console.error('Error guardando telefono:', err)
+      );
+    }
+
     // Crear transaccion en Allpay (API real)
+    const clientPhone = telefono || req.user.telefono || undefined;
     const allpayResponse = await createTransaction({
       amount: monto,
       currency: course.moneda,
@@ -154,6 +163,7 @@ const crearPago = async (req, res) => {
       webhookUrl: `${backendUrl}/api/payments/webhook`,
       clientName: req.user.nombre,
       clientEmail: req.user.email,
+      clientPhone,
       payments: tashlumim && tashlumim > 1 ? Math.min(Math.max(Math.floor(tashlumim), 2), 12) : undefined,
     });
 

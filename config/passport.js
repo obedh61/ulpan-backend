@@ -52,6 +52,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           googleId,
           rol: 'alumno',
           emailVerified: true,
+          avatar: profile.photos?.[0]?.value || null,
         });
 
         // Enviar email de bienvenida

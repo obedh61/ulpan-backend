@@ -68,6 +68,7 @@ app.use('/api/enrollments', require('./routes/enrollments'));
 app.use('/api/payments', require('./routes/payment'));
 app.use('/api/coupons', require('./routes/coupon'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/avatar', require('./routes/avatar'));
 app.use('/api/exchange-rates', require('./routes/exchangeRate'));
 
 // Healthcheck

@@ -47,7 +47,7 @@ const generateSign = (params) => {
 /**
  * Crea una transaccion de pago en Allpay
  */
-const createTransaction = async ({ amount, currency, description, paymentId, successUrl, failureUrl, webhookUrl, clientName, clientEmail, payments }) => {
+const createTransaction = async ({ amount, currency, description, paymentId, successUrl, failureUrl, webhookUrl, clientName, clientEmail, clientPhone, payments }) => {
   const params = {
     login: process.env.ALLPAY_API_LOGIN,
     order_id: paymentId,
@@ -67,6 +67,7 @@ const createTransaction = async ({ amount, currency, description, paymentId, suc
   if (payments && payments > 1) params.payments = payments;
   if (clientName) params.client_name = clientName;
   if (clientEmail) params.client_email = clientEmail;
+  if (clientPhone) params.client_phone = clientPhone;
 
   params.sign = generateSign(params);
 

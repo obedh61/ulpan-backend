@@ -100,6 +100,8 @@ const login = async (req, res) => {
       nombre: user.nombre,
       email: user.email,
       rol: user.rol,
+      avatar: user.avatar || null,
+      telefono: user.telefono || null,
       token: generarToken(user._id),
     });
   } catch (error) {
@@ -114,6 +116,8 @@ const getPerfil = async (req, res) => {
     nombre: req.user.nombre,
     email: req.user.email,
     rol: req.user.rol,
+    avatar: req.user.avatar || null,
+    telefono: req.user.telefono || null,
     googleId: req.user.googleId || null,
   });
 };
