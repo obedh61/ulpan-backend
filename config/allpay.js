@@ -64,15 +64,18 @@ const createTransaction = async ({ amount, currency, description, paymentId, suc
     webhook_url: webhookUrl,
   };
 
-  if (payments && payments > 1) params.payments = payments;
+  if (payments && payments > 1) {
+    params.inst = payments;
+    params.inst_fixed = 0;
+  }
   if (clientName) params.client_name = clientName;
   if (clientEmail) params.client_email = clientEmail;
-  if (clientPhone) params.client_phone = clientPhone;
+  if (clientPhone) params.client_phone = clientPhone.replace(/[\s\-()]/g, '');
 
   params.sign = generateSign(params);
 
   const response = await axios.post(
-    `${ALLPAY_ENDPOINT}?show=getpayment&mode=api10`,
+    `${ALLPAY_ENDPOINT}?show=getpayment&mode=api11`,
     params,
     {
       headers: { 'Content-Type': 'application/json' },
@@ -93,7 +96,7 @@ const checkPaymentStatus = async (orderId) => {
   params.sign = generateSign(params);
 
   const response = await axios.post(
-    `${ALLPAY_ENDPOINT}?show=paymentstatus&mode=api10`,
+    `${ALLPAY_ENDPOINT}?show=paymentstatus&mode=api11`,
     params,
     {
       headers: { 'Content-Type': 'application/json' },
