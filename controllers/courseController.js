@@ -129,6 +129,7 @@ const updateCourse = async (req, res) => {
             { $or: [{ videoUrl: null }, { videoUrl: '' }, { videoUrl: { $exists: false } }] },
             { $or: [{ zoomLink: null }, { zoomLink: '' }, { zoomLink: { $exists: false } }] },
             { $or: [{ pdfUrl: null }, { pdfUrl: '' }, { pdfUrl: { $exists: false } }] },
+            { $or: [{ pdfUrl2: null }, { pdfUrl2: '' }, { pdfUrl2: { $exists: false } }] },
           ],
         });
 
