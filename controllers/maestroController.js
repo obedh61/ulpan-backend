@@ -60,7 +60,7 @@ const getClasesCurso = async (req, res) => {
 // PUT /api/maestro/clases/:claseId
 const actualizarClase = async (req, res) => {
   try {
-    const { zoomLink, videoUrl, pdfUrl } = req.body;
+    const { zoomLink, videoUrl, pdfUrl, pdfUrl2 } = req.body;
 
     const clase = await Clase.findById(req.params.claseId);
     if (!clase) {
@@ -78,6 +78,7 @@ const actualizarClase = async (req, res) => {
     if (zoomLink !== undefined) clase.zoomLink = zoomLink;
     if (videoUrl !== undefined) clase.videoUrl = videoUrl;
     if (pdfUrl !== undefined) clase.pdfUrl = pdfUrl;
+    if (pdfUrl2 !== undefined) clase.pdfUrl2 = pdfUrl2;
 
     await clase.save();
 

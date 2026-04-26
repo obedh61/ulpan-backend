@@ -30,6 +30,10 @@ const claseSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    pdfUrl2: {
+      type: String,
+      default: '',
+    },
     videoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Video',
