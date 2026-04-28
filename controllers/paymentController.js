@@ -155,10 +155,11 @@ const crearPago = async (req, res) => {
     // Crear transaccion en Allpay (API real)
     const clientPhone = telefono || req.user.telefono || undefined;
     const cursoTituloDesc = resolveTranslatable(course.titulo, req.user.idioma);
+    const cursoLabel = { es: 'Curso', en: 'Course', he: 'קורס' }[req.user.idioma] || 'Curso';
     const allpayResponse = await createTransaction({
       amount: monto,
       currency: course.moneda,
-      description: `Curso: ${cursoTituloDesc}`,
+      description: `${cursoLabel}: ${cursoTituloDesc}`,
       paymentId: payment._id.toString(),
       successUrl: `${frontendUrl}/alumno/pago-resultado?paymentId=${payment._id}&status=success`,
       failureUrl: `${frontendUrl}/alumno/pago-resultado?paymentId=${payment._id}&status=failed`,
