@@ -10,6 +10,13 @@ const generarToken = (id) => {
   });
 };
 
+const SUPPORTED_LANGS = ['es', 'en', 'he'];
+const normalizeLang = (lng) => {
+  if (!lng) return null;
+  const base = String(lng).split('-')[0].toLowerCase();
+  return SUPPORTED_LANGS.includes(base) ? base : null;
+};
+
 // POST /api/auth/register
 const registro = async (req, res) => {
   const errors = validationResult(req);
@@ -29,7 +36,7 @@ const registro = async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
-    const lang = ['es', 'en', 'he'].includes(idioma) ? idioma : 'es';
+    const lang = normalizeLang(idioma) || normalizeLang(req.headers['x-user-lang']) || 'es';
 
     const user = await User.create({
       nombre,
@@ -230,6 +237,13 @@ const verificarEmail = async (req, res) => {
     user.emailVerified = true;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
+
+    // Sincronizar idioma con el que viene del cliente (query o header)
+    const idiomaCliente = normalizeLang(req.query.idioma) || normalizeLang(req.headers['x-user-lang']);
+    if (idiomaCliente && user.idioma !== idiomaCliente) {
+      user.idioma = idiomaCliente;
+    }
+
     await user.save({ validateBeforeSave: false });
 
     // Enviar email de bienvenida ahora que la cuenta está verificada
@@ -274,8 +288,9 @@ const reenviarVerificacion = async (req, res) => {
     user.emailVerificationToken = hashedToken;
     user.emailVerificationExpires = Date.now() + 24 * 3600000; // 24 horas
     // Actualizar idioma si se envía
-    if (['es', 'en', 'he'].includes(idioma)) {
-      user.idioma = idioma;
+    const idiomaNormalizado = normalizeLang(idioma) || normalizeLang(req.headers['x-user-lang']);
+    if (idiomaNormalizado) {
+      user.idioma = idiomaNormalizado;
     }
     await user.save({ validateBeforeSave: false });
 

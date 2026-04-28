@@ -54,8 +54,23 @@ router.post(
 );
 
 // Google OAuth
+const SUPPORTED_LANGS = ['es', 'en', 'he'];
+const normalizeLang = (lng) => {
+  if (!lng) return null;
+  const base = String(lng).split('-')[0].toLowerCase();
+  return SUPPORTED_LANGS.includes(base) ? base : null;
+};
+
 router.get(
   '/google',
+  (req, res, next) => {
+    // Capturar idioma del cliente en la sesion antes de redirigir a Google
+    const lang = normalizeLang(req.query.lang) || normalizeLang(req.headers['x-user-lang']);
+    if (lang && req.session) {
+      req.session.oauthLang = lang;
+    }
+    next();
+  },
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 

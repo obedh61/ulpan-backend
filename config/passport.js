@@ -16,6 +16,13 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+const SUPPORTED_LANGS = ['es', 'en', 'he'];
+const normalizeLang = (lng) => {
+  if (!lng) return null;
+  const base = String(lng).split('-')[0].toLowerCase();
+  return SUPPORTED_LANGS.includes(base) ? base : null;
+};
+
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
@@ -23,12 +30,17 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        passReqToCallback: true,
       },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
         const nombre = profile.displayName;
         const googleId = profile.id;
+
+        // Idioma capturado desde la sesion (set en /api/auth/google)
+        const sessionLang = req.session && req.session.oauthLang;
+        const idioma = normalizeLang(sessionLang) || 'es';
 
         // Buscar usuario por googleId o email
         let user = await User.findOne({
@@ -36,12 +48,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         });
 
         if (user) {
+          let changed = false;
           // Si existe por email pero sin googleId, vincular la cuenta
           if (!user.googleId) {
             user.googleId = googleId;
             user.emailVerified = true;
-            await user.save();
+            changed = true;
           }
+          // Sincronizar idioma con el idioma actual del cliente
+          if (sessionLang && user.idioma !== idioma) {
+            user.idioma = idioma;
+            changed = true;
+          }
+          if (changed) await user.save();
           return done(null, user);
         }
 
@@ -52,6 +71,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           googleId,
           rol: 'alumno',
           emailVerified: true,
+          idioma,
           avatar: profile.photos?.[0]?.value || null,
         });
 

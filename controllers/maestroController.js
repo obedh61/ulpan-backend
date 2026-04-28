@@ -90,7 +90,7 @@ const actualizarClase = async (req, res) => {
       // Buscar alumnos inscritos en el curso
       const inscripciones = await Enrollment.find({ cursoId: course._id }).select('alumnoId');
       const alumnoIds = inscripciones.map((e) => e.alumnoId);
-      const alumnos = await User.find({ _id: { $in: alumnoIds } }).select('nombre email');
+      const alumnos = await User.find({ _id: { $in: alumnoIds } }).select('nombre email idioma');
 
       if (alumnos.length > 0) {
         if (videoChanged) {

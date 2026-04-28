@@ -112,13 +112,13 @@ const crearPago = async (req, res) => {
       );
 
       // Notificar admins y maestro
-      User.find({ rol: 'admin' }).select('nombre email').then((admins) => {
+      User.find({ rol: 'admin' }).select('nombre email idioma').then((admins) => {
         sendAdminNewSaleEmail(admins, req.user, course, payment).catch((err) =>
           console.error('Error enviando admin sale email:', err)
         );
       });
       if (course.maestroId) {
-        User.findById(course.maestroId).select('nombre email').then((maestro) => {
+        User.findById(course.maestroId).select('nombre email idioma').then((maestro) => {
           sendMaestroNewStudentEmail(maestro, req.user, course).catch((err) =>
             console.error('Error enviando maestro new student email:', err)
           );
@@ -231,7 +231,7 @@ const completarPago = async (payment) => {
     });
     if (curso.maestroId) {
       const maestroId = curso.maestroId._id || curso.maestroId;
-      User.findById(maestroId).select('nombre email').then((maestro) => {
+      User.findById(maestroId).select('nombre email idioma').then((maestro) => {
         sendMaestroNewStudentEmail(maestro, alumno, curso).catch((err) =>
           console.error('Error enviando maestro new student email:', err)
         );

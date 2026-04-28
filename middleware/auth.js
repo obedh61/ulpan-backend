@@ -21,6 +21,17 @@ const authMiddleware = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Usuario no encontrado' });
     }
+
+    // Sincronizar idioma del usuario con el que viene del cliente (header)
+    const headerLang = req.headers['x-user-lang'];
+    const base = headerLang ? String(headerLang).split('-')[0].toLowerCase() : null;
+    if (base && ['es', 'en', 'he'].includes(base) && req.user.idioma !== base) {
+      req.user.idioma = base;
+      req.user
+        .save({ validateBeforeSave: false })
+        .catch((err) => console.error('Error sincronizando idioma:', err));
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Token no válido' });
